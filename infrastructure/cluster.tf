@@ -7,6 +7,11 @@ resource "azurerm_kubernetes_cluster" "k8s" {
     azurerm_role_assignment.aks_role_assignemnt_dns,
     azurerm_role_assignment.aks_role_assignemnt_msi
   ]
+  lifecycle {
+    ignore_changes = [
+      default_node_pool.0.node_count,
+    ]
+  }
   name                      = var.cluster_name
   location                  = azurerm_resource_group.k8s.location
   resource_group_name       = azurerm_resource_group.k8s.name
@@ -54,14 +59,14 @@ resource "azurerm_kubernetes_cluster" "k8s" {
     node_count              = var.agent_count
     availability_zones      = ["1", "2", "3"]
     vm_size                 = var.vm_size
-    os_disk_size_gb         = 30
+    os_disk_size_gb         = 40
     os_disk_type            = "Ephemeral"
     os_sku                  = "CBLMariner"
     vnet_subnet_id          = data.azurerm_subnet.k8s_subnet.id
     type                    = "VirtualMachineScaleSets"
     enable_auto_scaling     = "true"
     min_count               = 1
-    max_count               = 3
+    max_count               = 5
   }
 
   network_profile {
@@ -85,6 +90,10 @@ resource "azurerm_kubernetes_cluster" "k8s" {
     open_service_mesh { 
       enabled  = var.open_service_mesh_enabled
     }
+    azure_keyvault_secrets_provider {
+      enabled = true
+      secret_rotation_enabled = true
+    }
   }
 
   tags = {
@@ -92,56 +101,64 @@ resource "azurerm_kubernetes_cluster" "k8s" {
   }
 }
 
-resource "null_resource" "config_setup_bf1e8068f" {
+resource "azurerm_kubernetes_cluster_node_pool" "eshop_app_node_pool" {
+  lifecycle {
+    ignore_changes = [
+      node_count
+    ]
+  }
+  name                  = "eshop"
+  kubernetes_cluster_id = azurerm_kubernetes_cluster.k8s.id
+  vnet_subnet_id        = data.azurerm_subnet.k8s_subnet.id
+  vm_size               = "Standard_D4_v3"
+  enable_auto_scaling   = true
+  mode                  = "User"
+  os_sku                = "CBLMariner"
+  os_disk_size_gb       = 30
+  node_count            = 3
+  min_count             = 3
+  max_count             = 6
+
+  node_taints           = [ "reservedFor=eShopOnDapr:NoSchedule" ]
+}
+
+/*
+resource "azurerm_kubernetes_cluster_node_pool" "traduire_app_node_pool" {
+  lifecycle {
+    ignore_changes = [
+      node_count
+    ]
+  }
+  name                  = "traduire"
+  kubernetes_cluster_id = azurerm_kubernetes_cluster.k8s.id
+  vm_size               = "Standard_B4ms"
+  enable_auto_scaling   = true
+  mode                  = "User"
+  os_sku                = "CBLMariner"
+  os_disk_size_gb       = 30
+  node_count            = 3
+  min_count             = 3
+  max_count             = 6
+
+  node_taints           = [ "app=traduire:NoSchedule" ]
+}
+*/
+
+resource "null_resource" "config_setup_bf1e8069" {
   depends_on = [
-    azurerm_kubernetes_cluster.k8s
+    azurerm_kubernetes_cluster.k8s,
+    azurerm_kubernetes_cluster_node_pool.eshop_app_node_pool
+    //azurerm_kubernetes_cluster_node_pool.eshop_app_node_pool,
+    //azurerm_kubernetes_cluster_node_pool.traduire_app_node_pool
   ]
   provisioner "local-exec" {
-    command = "./aks-post-creation-configuration.sh"
+    command = "./aks-post-creation-addons.sh"
     interpreter = ["bash"]
 
     environment = {
       CLUSTER_NAME        = "${var.cluster_name}"
       RG                  = "${azurerm_resource_group.k8s.name}"
       SUBSCRIPTION_ID     = "${data.azurerm_client_config.current.subscription_id}"
-    }
-  }
-}
-
-resource "null_resource" "pod_identity_ingress_bf1e8068f" {
-  depends_on = [
-    null_resource.config_setup_bf1e8068f
-  ]
-  provisioner "local-exec" {
-    command = "./aks-pod-identity-creation.sh"
-    interpreter = ["bash"]
-
-    environment = {
-      CLUSTER_NAME        = "${var.cluster_name}"
-      CLUSTER_RG          = "${azurerm_resource_group.k8s.name}"
-      SUBSCRIPTION_ID     = "${data.azurerm_client_config.current.subscription_id}"
-      IDENTITY_NAME       = "${var.cluster_name}-ingress-identity"
-      IDENTITY_RG         = "${azurerm_resource_group.k8s.name}"
-      NAMESPACE           = "default"
-    }
-  }
-}
-
-resource "null_resource" "pod_identity_chat_bf1e8068f" {
-  depends_on = [
-    null_resource.pod_identity_ingress_bf1e8068f
-  ]
-  provisioner "local-exec" {
-    command = "./aks-pod-identity-creation.sh"
-    interpreter = ["bash"]
-
-    environment = {
-      CLUSTER_NAME        = "${var.cluster_name}"
-      CLUSTER_RG          = "${azurerm_resource_group.k8s.name}"
-      SUBSCRIPTION_ID     = "${data.azurerm_client_config.current.subscription_id}"
-      IDENTITY_NAME       = "${var.chat_ee85e06_identity}"
-      IDENTITY_RG         = "${var.chat_ee85e06_resource_group}"
-      NAMESPACE           = "default"
     }
   }
 }

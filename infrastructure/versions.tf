@@ -2,16 +2,17 @@
 terraform {
   required_version = ">= 1.0"
   required_providers {
-    azurerm        = "~> 2.83"
+    azurerm        = "~> 2.89"
   }
 }
 
 provider "azurerm" {
-  features {}
+  features  {}
 }
 
 provider "azurerm" {
-  alias           = "acr"
+  alias           = "core"
   features        {}
-  subscription_id = var.acr_subscription
+
+  subscription_id = var.core_subscription
 }

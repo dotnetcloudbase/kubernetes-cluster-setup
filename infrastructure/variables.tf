@@ -56,7 +56,7 @@ variable "load_balancer_sku" {
   description = "The type of load balancer to deploy as part of the AKS cluster"
 }
 
-variable "acr_subscription" {
+variable "core_subscription" {
   default     = "2deb88fe-eca8-499a-adb9-6e0ea8b6c1d2"
   description = "The subscription where Azure Container Repo lives"
 }
@@ -85,14 +85,6 @@ variable "github_actions_identity_name" {
 
 variable "github_actions_identity_resource_group" {
   description = "The Resource Group name that Github Taskrunner Identity"
-}
-
-variable "chat_ee85e06_resource_group" {
- description = "The Resource Group name the Chat Application" 
-}
-
-variable "chat_ee85e06_identity" {
- description = "The Identity of the Chat Application" 
 }
 
 variable "service_mesh_type" {

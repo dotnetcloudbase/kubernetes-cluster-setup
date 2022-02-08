@@ -1,5 +1,6 @@
 terraform {
   backend "azurerm" {
+    resource_group_name  = "DevSub02_Storage_RG"
     storage_account_name = "bjdterraform001"
     container_name       = "plans"
   }
@@ -11,9 +12,3 @@ resource "azurerm_resource_group" "k8s" {
   name                  = var.resource_group_name
   location              = var.location
 }
-
-resource "azurerm_resource_group" "jumpbox" {
-  name                  = "${var.resource_group_name}_jumpbox"
-  location              = var.location
-}
-
