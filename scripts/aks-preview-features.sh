@@ -10,7 +10,8 @@ az feature register --name RunCommandPreview --namespace Microsoft.ContainerServ
 az feature register --name AKS-AzureKeyVaultSecretsProvider --namespace Microsoft.ContainerService
 az feature register --name AKS-OpenServiceMesh --namespace Microsoft.ContainerService
 az feature register --name DisableLocalAccountsPreview --namespace Microsoft.ContainerService
+az feature register --name EnableOIDCIssuerPreview --namespace Microsoft.ContainerService
 
-az feature list -o table --query "[?contains(name, 'az feature register --name DisableLocalAccountsPreview')].{Name:name,State:properties.state}"
+az feature list -o table --query "[?contains(name, 'az feature register --name EnableOIDCIssuerPreview')].{Name:name,State:properties.state}"
 
 az provider register --namespace Microsoft.ContainerService
