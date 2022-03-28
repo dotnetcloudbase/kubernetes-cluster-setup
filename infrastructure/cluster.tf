@@ -12,35 +12,26 @@ resource "azurerm_kubernetes_cluster" "k8s" {
       default_node_pool.0.node_count,
     ]
   }
-  name                      = var.cluster_name
-  location                  = azurerm_resource_group.k8s.location
-  resource_group_name       = azurerm_resource_group.k8s.name
-  node_resource_group       = "${azurerm_resource_group.k8s.name}_nodes"
-  dns_prefix_private_cluster = var.cluster_name
-  kubernetes_version        = data.azurerm_kubernetes_service_versions.current.latest_version
-  private_cluster_enabled   = "true"
-  private_dns_zone_id       = data.azurerm_private_dns_zone.aks_private_zone.id
-  automatic_channel_upgrade = "patch"
-  local_account_disabled    = "true"
-  sku_tier                  = "Paid"
+  name                                = var.cluster_name
+  location                            = azurerm_resource_group.k8s.location
+  resource_group_name                 = azurerm_resource_group.k8s.name
+  node_resource_group                 = "${azurerm_resource_group.k8s.name}_nodes"
+  dns_prefix_private_cluster          = var.cluster_name
+  kubernetes_version                  = data.azurerm_kubernetes_service_versions.current.latest_version
+  private_cluster_enabled             = true
+  private_dns_zone_id                 = data.azurerm_private_dns_zone.aks_private_zone.id
+  automatic_channel_upgrade           = "patch"
+  local_account_disabled              = true
+  sku_tier                            = "Paid"
+  azure_policy_enabled                = true
+  open_service_mesh_enabled           = var.open_service_mesh_enabled
+  role_based_access_control_enabled   = true
 
-  role_based_access_control {
-    enabled = "true"
-    azure_active_directory {
-      managed                 = "true" 
-      azure_rbac_enabled      = "true"  
-      admin_group_object_ids  = [
-        var.azure_rbac_group_object_id,
-      ] 
-    }
-  }
-
-  linux_profile {
-    admin_username = var.admin_user
-
-    ssh_key {
-      key_data = var.ssh_public_key
-    }
+  azure_active_directory_role_based_access_control {
+    managed                 = true
+    azure_rbac_enabled      = true
+    tenant_id               = data.azurerm_client_config.current.tenant_id
+    admin_group_object_ids  = [ var.azure_rbac_group_object_id ] 
   }
 
   identity {
@@ -79,21 +70,13 @@ resource "azurerm_kubernetes_cluster" "k8s" {
     network_policy     = "calico"
   }
 
-  addon_profile {
-    oms_agent {
-      enabled                    = true
-      log_analytics_workspace_id = azurerm_log_analytics_workspace.k8s.id
-    }
-    azure_policy {
-      enabled  = true
-    }
-    open_service_mesh { 
-      enabled  = var.open_service_mesh_enabled
-    }
-    azure_keyvault_secrets_provider {
-      enabled = true
-      secret_rotation_enabled = true
-    }
+  oms_agent {
+    log_analytics_workspace_id = azurerm_log_analytics_workspace.k8s.id
+  }
+
+  key_vault_secrets_provider {
+    secret_rotation_enabled = true
+    secret_rotation_interval = "2m"
   }
 
   tags = {
